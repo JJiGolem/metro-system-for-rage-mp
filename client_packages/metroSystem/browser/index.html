@@ -1,0 +1,48 @@
+<html lang="ru" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <title>Metro</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;300;500&family=Roboto:wght@100;300&display=swap" rel="stylesheet">
+  <script src="js/vue.js"></script>
+  <style>
+    [v-cloak] {
+        display: none;
+    }
+</style>
+</head>
+<body>
+<div v-cloak class="Metro" v-if="active">
+  <button class="exit" @click="exit()">ВЫЙТИ</button>
+  <section class="metro-map" :style="'background: url(img/route_' + routeNumber +'.png) no-repeat; background-size: 100% 100%;'">
+    <div></div>
+  </section>
+  <section class="metro-stations">
+    <div class="content">
+
+      <div class="global-content">
+        <div class="station" v-for="(item, key) in stations" @click="selectStation(item)">
+          <h2 class="heading">{{item.Id}}. {{item.Name}}</h2>
+          <p v-if="item.Id == currentStation" class="description">Вы здесь</p>
+        </div>
+      </div>
+
+    </div>
+    <div class="next-content">
+      <div class="buy-ticket">Покупка билета</div>
+      <div class="info">Маршрут №{{routeNumber}}</div>
+      <div class="info">Станция:</div>
+      <div v-if="selectedStation" class="choice">{{selectedStation.Id}}. {{selectedStation.Name}}</div>
+      <div v-else class="choice">Не выбрана</div>
+
+      <div class="payment">Оплата:</div>
+      <div class="cost"><div class="cost">${{ticketPrice}}</div></div>
+      <button class="a-ticket" @click="buyTicket()">Купить билет</button>
+    </div>
+  </section>
+</div>
+<script src="js/index.js"></script>
+</body>
+</html>
