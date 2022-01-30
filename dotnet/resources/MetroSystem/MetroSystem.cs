@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Newtonsoft.Json;
 using GTANetworkAPI;
 using GolemoSDK;
@@ -50,7 +49,7 @@ namespace Golemo.Buildings
                 MetroStation station = player.GetData<MetroStation>(nameof(MetroStation));
                 if (station == null) return;
 
-                MetroRoute route = _routes.Find(x => x.Stations.First(x => x == station) != null);
+                MetroRoute route = _routes.Find(x => x.Stations.Exists(x => x == station));
                 if (route == null) return;
                 
                 player.TriggerClientEvent("metro::open_menu", TicketPrice, station.Id, route.Id, JsonConvert.SerializeObject(route.Stations));
@@ -83,10 +82,10 @@ namespace Golemo.Buildings
                     return;
                 }
 
-                MetroRoute route = _routes.Find(x => x.Stations.FirstOrDefault(x => x == station) != null);
+                MetroRoute route = _routes.Find(x => x.Stations.Exists(x => x == station));
                 if (route == null) return;
                 
-                MetroStation wStation = route.Stations.FirstOrDefault(x => x.Id == stationId);
+                MetroStation wStation = route.Stations.Find(x => x.Id == stationId);
                 if (wStation == null)
                 {
                     Notify.Error(player, "Попробуйте снова!");
@@ -133,7 +132,7 @@ namespace Golemo.Buildings
             public Vector3 Position { get; }
 
             [JsonIgnore]
-            private List<Vector3> _trainSpawnPositions { get; }
+            private Vector3[] _trainSpawnPositions { get; }
 
             public MetroStation(int id, string name, Vector3 shapePosition, Vector3 spawnPosition1, Vector3 spawnPosition2)
             {
@@ -142,7 +141,7 @@ namespace Golemo.Buildings
 
                 Position = shapePosition;
 
-                _trainSpawnPositions = new List<Vector3>(2)
+                _trainSpawnPositions = new Vector3[2]
                 {
                     spawnPosition1, spawnPosition2
                 };
