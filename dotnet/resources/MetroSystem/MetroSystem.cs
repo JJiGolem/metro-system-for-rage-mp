@@ -9,9 +9,8 @@ namespace Golemo.Buildings
 {
     class MetroSystem : Script
     {
-        private static NLog _log = new NLog("Metro");
-        private static List<MetroRoute> _routes;
-        private static int _ticketPrice = 500;
+        private readonly static List<MetroRoute> _routes;
+        private const int TicketPrice = 500;
 
         [ServerEvent(Event.ResourceStart)]
         public void ResourceStart()
@@ -37,7 +36,7 @@ namespace Golemo.Buildings
             }
             catch (Exception e)
             {
-                _log.Write($"Metro_ResourceStart: {e}", NLog.Type.Error);
+                Console.WriteLine($"Metro_ResourceStart: {e}");
             }
         }
 
@@ -45,24 +44,20 @@ namespace Golemo.Buildings
         {
             try
             {
-                if (!Main.Players.ContainsKey(player)) return;
+                if (Main.Players.ContainsKey(player) == false) return;
+                if (player.HasData(nameof(MetroStation)) == false) return;
 
-                if (player.HasData("METRO_STATION"))
-                {
-                    MetroStation station = player.GetData<MetroStation>("METRO_STATION");
-                    if (station != null)
-                    {
-                        MetroRoute route = _routes.Find(x => x.Stations.First(x => x == station) != null);
-                        if (route != null)
-                        {
-                            Trigger.ClientEvent(player, "metro::open_menu", _ticketPrice, station.Id, route.Id, JsonConvert.SerializeObject(route.Stations));
-                        }
-                    }
-                }
+                MetroStation station = player.GetData<MetroStation>(nameof(MetroStation));
+                if (station == null) return;
+
+                MetroRoute route = _routes.Find(x => x.Stations.First(x => x == station) != null);
+                if (route == null) return;
+                
+                player.TriggerClientEvent("metro::open_menu", TicketPrice, station.Id, route.Id, JsonConvert.SerializeObject(route.Stations));
             }
             catch (Exception e)
             {
-                _log.Write($"Metro_InteractionPressed: {e}", NLog.Type.Error);
+                Console.WriteLine($"Metro_InteractionPressed: {e}");
             }
         }
 
@@ -71,44 +66,42 @@ namespace Golemo.Buildings
         {
             try
             {
-                if (!Main.Players.ContainsKey(player)) return;
-                if (player.HasData("METRO_STATION"))
-                {
-                    MetroStation station = player.GetData<MetroStation>("METRO_STATION");
-                    if (station != null)
-                    {
-                        if (Main.Players[player].Money < _ticketPrice)
-                        {
-                            Notify.Error(player, "У вас недостаточно денег");
-                            return;
-                        }
-                        if (station.Id == stationId)
-                        {
-                            Notify.Error(player, "Вы уже находитесь на этой станции");
-                            return;
-                        }
-                        MetroRoute route = _routes.Find(x => x.Stations.FirstOrDefault(x => x == station) != null);
-                        if (route != null)
-                        {
-                            MetroStation wStation = route.Stations.FirstOrDefault(x => x.Id == stationId);
-                            if (wStation == null)
-                            {
-                                Notify.Error(player, "Попробуйте снова!");
-                                return;
-                            }
+                if (Main.Players.ContainsKey(player) == false) return;
+                if (player.HasData(nameof(MetroStation)) == false) return;
 
-                            int aIndex = route.Stations.FindIndex(x => x == station);
-                            int wIndex = route.Stations.FindIndex(x => x == wStation);
-                            station.SpawnTrain(player, wStation, aIndex > wIndex);
-                            
-                            MoneySystem.Wallet.Change(player, -_ticketPrice);
-                        }
-                    }
+                MetroStation station = player.GetData<MetroStation>(nameof(MetroStation));
+                if (station == null) return;
+                
+                if (Main.Players[player].Money < TicketPrice)
+                {
+                    Notify.Error(player, "У вас недостаточно денег");
+                    return;
                 }
+                if (station.Id == stationId)
+                {
+                    Notify.Error(player, "Вы уже находитесь на этой станции");
+                    return;
+                }
+
+                MetroRoute route = _routes.Find(x => x.Stations.FirstOrDefault(x => x == station) != null);
+                if (route == null) return;
+                
+                MetroStation wStation = route.Stations.FirstOrDefault(x => x.Id == stationId);
+                if (wStation == null)
+                {
+                    Notify.Error(player, "Попробуйте снова!");
+                    return;
+                }
+
+                int aIndex = route.Stations.FindIndex(x => x == station);
+                int wIndex = route.Stations.FindIndex(x => x == wStation);
+                station.SpawnTrain(player, wStation, aIndex > wIndex);
+                
+                MoneySystem.Wallet.Change(player, -TicketPrice);
             }
             catch (Exception e)
             {
-                _log.Write($"Metro_BuyTicket: {e}", NLog.Type.Error);
+                Console.WriteLine($"Metro_BuyTicket: {e}");
             }
         }
 
@@ -122,7 +115,7 @@ namespace Golemo.Buildings
         private class MetroRoute
         {
             public int Id { get; }
-            public List<MetroStation> Stations;
+            public List<MetroStation> Stations { get; };
 
             public MetroRoute(int id, List<MetroStation> stations)
             {
@@ -159,34 +152,23 @@ namespace Golemo.Buildings
 
             public void SpawnTrain(Player player, MetroStation station, bool forward)
             {
-                try
-                {
-                    uint privateDimension = Core.Dimensions.RequestPrivateDimension(player);
-                    NAPI.Entity.SetEntityDimension(player, privateDimension);
+                uint privateDimension = Core.Dimensions.RequestPrivateDimension(player);
+                NAPI.Entity.SetEntityDimension(player, privateDimension);
 
-                    Vector3 spawnPos = GetTrainSpawnPositionWithForwardMove(forward);
-                    Vector3 pointPos = station.GetTrainSpawnPositionWithForwardMove(forward);
-                    Trigger.ClientEvent(player, "metro::start_race", spawnPos, pointPos, station.Position, privateDimension);
-                }
-                catch (Exception e)
-                {
-                    _log.Write($"Metro_SpawnTrain: {e}", NLog.Type.Error);
-                }
+                Vector3 spawnPos = GetTrainSpawnPositionWithForwardMove(forward);
+                Vector3 pointPos = station.GetTrainSpawnPositionWithForwardMove(forward);
+                player.TriggerClientEvent("metro::start_race", spawnPos, pointPos, station.Position, privateDimension);
             }
 
             public Vector3 GetTrainSpawnPositionWithForwardMove(bool forward)
             {
                 try
                 {
-                    int index = forward ? 1 : 0;
-                    if (_trainSpawnPositions.IndexInRange(index))
-                        return _trainSpawnPositions[index];
-                    else
-                        return Position;
+                    return _trainSpawnPositions[forward ? 1 : 0];
                 }
                 catch (Exception e)
                 {
-                    _log.Write($"Metro_GetTrainSpawnPosition: {e}");
+                    Console.WriteLine($"Metro_GetTrainSpawnPosition: {e}");
                     return Position;
                 }
             }
@@ -201,26 +183,19 @@ namespace Golemo.Buildings
 
             private void GreateGTAElements()
             {
-                try
+                _blip = NAPI.Blip.CreateBlip(795, Position, 0.5f, 47, Name, 255, 0, true, 0, 0);
+                _marker = NAPI.Marker.CreateMarker(1, Position, new Vector3(), new Vector3(), 1f, new Color(255, 0, 255, 120), false, 0);
+                _shape = NAPI.ColShape.CreateCylinderColShape(Position, 1f, 2f, 0);
+                _shape.OnEntityEnterColShape += (s, e) =>
                 {
-                    _blip = NAPI.Blip.CreateBlip(795, Position, 0.5f, 47, Name, 255, 0, true, 0, 0);
-                    _marker = NAPI.Marker.CreateMarker(1, Position, new Vector3(), new Vector3(), 1f, new Color(255, 0, 255, 120), false, 0);
-                    _shape = NAPI.ColShape.CreateCylinderColShape(Position, 1f, 2f, 0);
-                    _shape.OnEntityEnterColShape += (s, e) =>
-                    {
-                        e.SetData("INTERACTIONCHECK", 817);
-                        e.SetData("METRO_STATION", this);
-                    };
-                    _shape.OnEntityExitColShape += (s, e) =>
-                    {
-                        e.SetData("INTERACTIONCHECK", 0);
-                        e.ResetData("METRO_STATION");
-                    };
-                }
-                catch (Exception e)
+                    e.SetData("INTERACTIONCHECK", 817);
+                    e.SetData(nameof(MetroStation), this);
+                };
+                _shape.OnEntityExitColShape += (s, e) =>
                 {
-                    _log.Write($"Metro_CreateGTAElements: {e}", NLog.Type.Error);
-                }
+                    e.SetData("INTERACTIONCHECK", 0);
+                    e.ResetData(nameof(MetroStation));
+                };
             }
         }
     }
