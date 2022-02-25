@@ -7,7 +7,8 @@ const MNatives = {
   GetEntityCoords: "0x3FEF770D40960D5A",
   DeleteAllTrains: "0x736A718577F39C7D",
   GetTrainCarriage: "0x08AAFD0814722BC3",
-  SetCamViewMode: "0x5A4F9EDF1673F704"
+  SetCamViewMode: "0x5A4F9EDF1673F704",
+  GetCamViewMode: "0x8D4D46230B2C353A"
 }
 
 let browser = null;
@@ -130,8 +131,8 @@ mp.events.add('metro::buy_ticket_trigger', (stationId) => {
 mp.events.add("metro::start_race", async (trainSpawnPosition, pointPosition, playerSpawnPosition, privateDimension) => {
   await createTrain(trainSpawnPosition);
 
-  lastCamViewMode = mp.game.invoke("0x8D4D46230B2C353A");
-  mp.game.invoke("0x5A4F9EDF1673F704", 4);
+  lastCamViewMode = mp.game.invoke(MNatives.GetCamViewMode);
+  mp.game.invoke(MNatives.SetCamViewMode, 4);
 
   await blackOutScreen(500, 1500, 1000);
 
@@ -162,7 +163,7 @@ mp.events.add("playerEnterColshape", async (enterShape) => {
     trainStoped = false;
     
     await mp.game.waitAsync(100);
-    mp.game.invoke("0x5A4F9EDF1673F704", lastCamViewMode);
+    mp.game.invoke(MNatives.SetCamViewMode, lastCamViewMode);
     mp.events.callRemote("metro::race_finish");
   }
 });
@@ -171,7 +172,7 @@ mp.events.add("playerQuit", (player) => {
   if (player == localplayer && train && pointShape) {
     pointShape.destroy();
     mp.game.vehicle.deleteMissionTrain(train);
-    mp.game.invoke("0x5A4F9EDF1673F704", lastCamViewMode);
+    mp.game.invoke(MNatives.SetCamViewMode, lastCamViewMode);
   }
 });
 
